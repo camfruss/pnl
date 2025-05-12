@@ -12,7 +12,28 @@ void PnLCalculator::calculate(const std::string& csv_file, const std::string& st
     std::ifstream ifs { csv_file };
     Strategy strategy { str_strategy == "fifo" ? Strategy::FIFO : Strategy::LIFO };
     std::string line {};
-    
+   
+    auto peek = [&strategy](std::deque<Position>& positions) {
+        switch (strategy) {
+            case Strategy::FIFO:
+                return positions.front();
+                break;
+            case Strategy::LIFO:
+                return positions.back();
+                break;
+        }
+    };
+    auto pop = [&strategy](std::deque<Position>& positions) {
+        switch (strategy) {
+            case Strategy::FIFO:
+                return positions.pop_front();
+                break;
+            case Strategy::LIFO:
+                return positions.pop_back();
+                break;
+        }
+    };
+
     std::getline(ifs, line);  // skips header line 
     while (ifs.good() && std::getline(ifs, line))
     {
@@ -53,36 +74,50 @@ void PnLCalculator::process_trade(const Trade& trade, Strategy strategy)
     double qty_unmatched { trade.quantity }, trade_pnl {};
     while (qty_unmatched && !positions.empty() && can_close(trade, position_type))
     {
+        double shares_matched {};
+
         switch (strategy) 
         {
             case Strategy::LIFO: {
                 auto& order_to_close { positions.back() };
-                if (trade.quantity - order_to_close.quantity >= -std::numeric_limits<double>::epsilon()) {
+
+                if (qty_unmatched - order_to_close.quantity >= -std::numeric_limits<double>::epsilon()) { // full close
                     positions.pop_back();
                     is_clearing = true;
-                } else {
-                    order_to_close.quantity -= trade.quantity;
+                    shares_matched = order_to_close.quantity;
+                    qty_unmatched -= order_to_close.quantity;
+                } else {  // partial close 
+                    shares_matched = qty_unmatched;
+                    qty_unmatched = 0;
+                    order_to_close.quantity -= shares_matched;
                 }
-                
-                double abs_pnl { trade.quantity * (trade.price - order_to_close.price) };
+               
+                double abs_pnl { shares_matched * (trade.price - order_to_close.price) };
                 trade_pnl += trade.orderType == OrderType::SELL ? abs_pnl : -1 * abs_pnl;
                 
                 break;
             }
             case Strategy::FIFO: {
                 auto& order_to_close { positions.front() };
-                if (trade.quantity - order_to_close.quantity >= -std::numeric_limits<double>::epsilon()) {
+
+                if (qty_unmatched - order_to_close.quantity >= -std::numeric_limits<double>::epsilon()) { // full close
                     positions.pop_front();
                     is_clearing = true;
-                } else {
-                    order_to_close.quantity -= trade.quantity;
+                    shares_matched = order_to_close.quantity;
+                    qty_unmatched -= order_to_close.quantity;
+                } else {  // partial close 
+                    shares_matched = qty_unmatched;
+                    qty_unmatched = 0;
+                    order_to_close.quantity -= shares_matched;
                 }
-                
-                double abs_pnl { trade.quantity * (trade.price - order_to_close.price) };
+               
+                double abs_pnl { shares_matched * (trade.price - order_to_close.price) };
                 trade_pnl += trade.orderType == OrderType::SELL ? abs_pnl : -1 * abs_pnl;
                 
                 break;
             }
+
+            qty_unmatched -= shares_matched;
         }
     }
 
@@ -93,13 +128,11 @@ void PnLCalculator::process_trade(const Trade& trade, Strategy strategy)
     if (qty_unmatched > std::numeric_limits<double>::epsilon() || 
         !can_close(trade, position_type)) 
     {
-        using enum PositionType;
-
-        positions.emplace_back(trade.price, trade.quantity);
-        position_type = trade.orderType == OrderType::BUY ? LONG : SHORT;
+        positions.emplace_back(trade.price, qty_unmatched);
+        position_type = trade.orderType == OrderType::BUY ? PositionType::LONG : PositionType::SHORT;
     }
 
     if (is_clearing) {
-        m_oss << std::format("{},{},{}\n", trade.timestamp, trade.ticker, trade_pnl);
+        m_oss << std::format("{},{},{:.2f}\n", trade.timestamp, trade.ticker, trade_pnl);
     }
 }

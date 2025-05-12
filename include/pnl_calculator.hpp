@@ -28,7 +28,7 @@ class PnLCalculator
             LIFO
         };
 
-        struct Positions {
+        struct Position {
             double price;
             double quantity;
         };
@@ -57,6 +57,6 @@ class PnLCalculator
         }
 
     private:
-        std::unordered_map<std::string, std::pair<PositionType, std::deque<Positions>>> m_openPositions {};
+        std::unordered_map<std::string, std::pair<PositionType, std::deque<Position>>> m_openPositions {};
         std::ostringstream m_oss;
 };
