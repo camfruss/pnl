@@ -13,27 +13,6 @@ void PnLCalculator::calculate(const std::string& csv_file, const std::string& st
     Strategy strategy { str_strategy == "fifo" ? Strategy::FIFO : Strategy::LIFO };
     std::string line {};
    
-    auto peek = [&strategy](std::deque<Position>& positions) {
-        switch (strategy) {
-            case Strategy::FIFO:
-                return positions.front();
-                break;
-            case Strategy::LIFO:
-                return positions.back();
-                break;
-        }
-    };
-    auto pop = [&strategy](std::deque<Position>& positions) {
-        switch (strategy) {
-            case Strategy::FIFO:
-                return positions.pop_front();
-                break;
-            case Strategy::LIFO:
-                return positions.pop_back();
-                break;
-        }
-    };
-
     std::getline(ifs, line);  // skips header line 
     while (ifs.good() && std::getline(ifs, line))
     {
