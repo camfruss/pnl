@@ -12,13 +12,34 @@ void PnLCalculator::calculate(const std::string& csv_file, const std::string& st
     std::ifstream ifs { csv_file };
     Strategy strategy { str_strategy == "fifo" ? Strategy::FIFO : Strategy::LIFO };
     std::string line {};
-   
+
+    auto peek = [&strategy](std::deque<Position>& positions) -> Position& {
+        switch (strategy) {
+            case Strategy::FIFO:
+                return positions.front();
+                break;
+            case Strategy::LIFO:
+                return positions.back();
+                break;
+        }
+    };
+    auto pop = [&strategy](std::deque<Position>& positions) {
+        switch (strategy) {
+            case Strategy::FIFO:
+                positions.pop_front();
+                break;
+            case Strategy::LIFO:
+                positions.pop_back();
+                break;
+        }
+    };
+
     std::getline(ifs, line);  // skips header line 
     while (ifs.good() && std::getline(ifs, line))
     {
         Trade trade {};
         parse_trade(line, trade);
-        process_trade(trade, strategy);
+        process_trade(trade, peek, pop);
     }
 
     std::cout << std::format("TIMESTAMP,SYMBOL,PNL\n");
@@ -45,59 +66,30 @@ void PnLCalculator::parse_trade(const std::string& line, Trade& trade)
     trade.quantity = std::stod(tmp);
 }
 
-void PnLCalculator::process_trade(const Trade& trade, Strategy strategy)
+void PnLCalculator::process_trade(const Trade& trade, auto& peek, auto& pop)
 {
     auto& [position_type, positions] { m_openPositions[trade.ticker] };
 
     bool is_clearing { false };
     double qty_unmatched { trade.quantity }, trade_pnl {};
-    while (qty_unmatched && !positions.empty() && can_close(trade, position_type))
+    while (qty_unmatched > 0 && !positions.empty() && can_close(trade, position_type))
     {
         double shares_matched {};
+        auto& order_to_close { peek(positions) };
 
-        switch (strategy) 
-        {
-            case Strategy::LIFO: {
-                auto& order_to_close { positions.back() };
-
-                if (qty_unmatched - order_to_close.quantity >= -std::numeric_limits<double>::epsilon()) { // full close
-                    positions.pop_back();
-                    is_clearing = true;
-                    shares_matched = order_to_close.quantity;
-                    qty_unmatched -= order_to_close.quantity;
-                } else {  // partial close 
-                    shares_matched = qty_unmatched;
-                    qty_unmatched = 0;
-                    order_to_close.quantity -= shares_matched;
-                }
-               
-                double abs_pnl { shares_matched * (trade.price - order_to_close.price) };
-                trade_pnl += trade.orderType == OrderType::SELL ? abs_pnl : -1 * abs_pnl;
-                
-                break;
-            }
-            case Strategy::FIFO: {
-                auto& order_to_close { positions.front() };
-
-                if (qty_unmatched - order_to_close.quantity >= -std::numeric_limits<double>::epsilon()) { // full close
-                    positions.pop_front();
-                    is_clearing = true;
-                    shares_matched = order_to_close.quantity;
-                    qty_unmatched -= order_to_close.quantity;
-                } else {  // partial close 
-                    shares_matched = qty_unmatched;
-                    qty_unmatched = 0;
-                    order_to_close.quantity -= shares_matched;
-                }
-               
-                double abs_pnl { shares_matched * (trade.price - order_to_close.price) };
-                trade_pnl += trade.orderType == OrderType::SELL ? abs_pnl : -1 * abs_pnl;
-                
-                break;
-            }
-
-            qty_unmatched -= shares_matched;
+        if (qty_unmatched - order_to_close.quantity >= -std::numeric_limits<double>::epsilon()) { // full close
+            shares_matched = order_to_close.quantity;
+            is_clearing = true;
+            pop(positions);
+        } else {  // partial close 
+            shares_matched = qty_unmatched;
+            qty_unmatched = 0;
+            order_to_close.quantity -= shares_matched;
         }
+       
+        double abs_pnl { shares_matched * (trade.price - order_to_close.price) };
+        trade_pnl += trade.orderType == OrderType::SELL ? abs_pnl : -1 * abs_pnl;
+        qty_unmatched -= shares_matched; 
     }
 
     if (positions.empty()) {

@@ -42,7 +42,7 @@ class PnLCalculator
         };
 
         void parse_trade(const std::string& line, Trade& trade);
-        void process_trade(const Trade& trade, Strategy strategy);
+        void process_trade(const Trade& trade, auto& peek, auto& pop);
 
         /* Returns true if {trade} is able to close out a current position
          * and false if {trade} adds to a current position
