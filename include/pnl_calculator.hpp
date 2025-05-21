@@ -1,51 +1,35 @@
 #pragma once
 
-#include<deque>
+#include "../include/types.hpp"
+
 #include <sstream>
 #include <string>
-#include <unordered_map>
 
 
+class Trade;
+
+template <typename Strategy>
 class PnLCalculator
 {
     public:
-        void calculate(const std::string& input_file, const std::string& strategy);
+        /*
+         *
+         */
+        void calculate(const std::string& input_file) const;
 
     private:
-        enum class OrderType {
-            BUY,
-            SELL
-        };
-
-        enum class PositionType {
-            NONE,
-            SHORT,
-            LONG
-        };
-
-        enum class Strategy {
-            FIFO,
-            LIFO
-        };
-
-        struct Position {
-            double price;
-            double quantity;
-        };
+        /*
+         *
+         */
+        Trade parse_trade(const std::string& line);
         
-        struct Trade {
-            int timestamp;  // assumes date passed in as int
-            std::string ticker;
-            OrderType orderType;
-            double price;
-            double quantity;  // to support fractional shares
-        };
+        /*
+         *
+         */
+        void process_trade(const Trade& trade);
 
-        void parse_trade(const std::string& line, Trade& trade);
-        void process_trade(const Trade& trade, auto& peek, auto& pop);
-
-        /* Returns true if {trade} is able to close out a current position
-         * and false if {trade} adds to a current position
+        /* Returns true if trade is able to close out a current position
+         * and false if trade adds to a current position
          */
         inline bool can_close(const Trade& trade, PositionType position_type)
         {
@@ -57,6 +41,6 @@ class PnLCalculator
         }
 
     private:
-        std::unordered_map<std::string, std::pair<PositionType, std::deque<Position>>> m_openPositions {};
+        std::unordered_map<std::string, std::pair<PositionType, Strategy>> m_openPositions {};
         std::ostringstream m_oss;
 };
