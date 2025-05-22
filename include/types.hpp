@@ -1,20 +1,20 @@
 
-enum class OrderType {
-    BUY,
-    SELL
+enum class order_type {
+    buy,
+    sell
 };
 
-enum class PositionType {
-    NONE,
-    SHORT,
-    LONG
+enum class position_type {
+    none,
+    short_position,
+    long_position
 };
 
-enum class StrategyType {
-    FIFO,  // first-in, first-out
-    LIFO,  // last-in, first-out 
-    HIFO,  // highest-in, first-out 
-    LOFO,  // lowest-in, first-out
-    WAC    // weighted average cost
+enum class accounting_method {
+    fifo,  // first-in, first-out
+    lifo,  // last-in, first-out 
+    hifo,  // highest-in, first-out 
+    lofo,  // lowest-in, first-out
+    wac    // weighted average cost
 };
 

@@ -3,13 +3,23 @@
 #include <string>
 
 
-enum class OrderType;
+enum class order_type;
 
-struct Trade {
-    int timestamp;  // assumes date passed in as int
+struct trade {
+    int timestamp;        // assumes date passed in as int
     std::string ticker;
-    OrderType orderType;
+    order_type orderType;
     double price;
-    double quantity;  // to support fractional shares
+    double quantity;      // to support fractional shares
+
+    bool operator<(const trade& trade)
+    {
+        return price < trade.price;
+    }
+
+    bool operator>(const trade& trade)
+    {
+        return price > trade.price;
+    }
 };
 

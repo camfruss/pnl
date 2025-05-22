@@ -1,46 +1,35 @@
 #pragma once
 
+#include "../include/trade.hpp"
 #include "../include/types.hpp"
 
 #include <sstream>
 #include <string>
 
 
-class Trade;
+class position;
 
-template <typename Strategy>
-class PnLCalculator
+template <typename T>
+class pnl_calculator
 {
     public:
         /*
          *
          */
-        void calculate(const std::string& input_file) const;
+        void calculate(const std::string&);
 
     private:
         /*
          *
          */
-        Trade parse_trade(const std::string& line);
+        trade parse_trade(const std::string& t_line);
         
         /*
          *
          */
-        void process_trade(const Trade& trade);
-
-        /* Returns true if trade is able to close out a current position
-         * and false if trade adds to a current position
-         */
-        inline bool can_close(const Trade& trade, PositionType position_type)
-        {
-            return (
-                position_type == PositionType::NONE ||
-                (trade.orderType == OrderType::BUY && position_type == PositionType::SHORT) ||
-                (trade.orderType == OrderType::SELL && position_type == PositionType::LONG)
-            );
-        }
+        void process_trade(const trade& t_trade);
 
     private:
-        std::unordered_map<std::string, std::pair<PositionType, Strategy>> m_openPositions {};
+        std::unordered_map<std::string, std::unique_ptr<position>> m_openPositions {};
         std::ostringstream m_oss;
 };
