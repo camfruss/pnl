@@ -85,6 +85,10 @@ template <AccountingMethod T>
 void pnl_calculator<T>::process_trade(const trade& t_trade)
 {
     auto& pos { m_openPositions[t_trade.ticker] };
+    if (!pos)  // on first access, unique_ptr default ctor sets ptr to nullptr (vs. default ctor for T) 
+    {
+        pos = std::make_unique<T>();
+    }
 
     bool is_clearing { pos->can_close(t_trade) };
     double unfilled { t_trade.quantity };
@@ -93,7 +97,7 @@ void pnl_calculator<T>::process_trade(const trade& t_trade)
     while (unfilled > 0 && pos->can_close(t_trade))
     {
         double filled {};
-        auto& order_to_close { pos->peek() };
+        trade& order_to_close { pos->peek() };
 
         if (unfilled - order_to_close.quantity >= -std::numeric_limits<double>::epsilon())  // full close
         { 
@@ -105,7 +109,9 @@ void pnl_calculator<T>::process_trade(const trade& t_trade)
             order_to_close.quantity -= unfilled;
             filled = unfilled;
         }
-       
+
+        // TODO: order_to_close CANNOT be used after pop !!
+
         double abs_pnl { filled * (t_trade.price - order_to_close.price) };
         trade_pnl += t_trade.orderType == order_type::sell ? abs_pnl : -1 * abs_pnl;
         unfilled -= filled; 

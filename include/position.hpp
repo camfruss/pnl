@@ -36,15 +36,15 @@ class position
         /* Returns false if t_trade adds to a current position, and true otherwise */
         inline bool can_close(const trade& t_trade)
         {
-            return (
+            return (!empty() && (
                 m_positionType == position_type::none ||
                 (t_trade.orderType == order_type::buy && m_positionType == position_type::short_position) ||
                 (t_trade.orderType == order_type::sell && m_positionType == position_type::long_position)
-            );
+            ));
         }
 
     protected:
-        position_type m_positionType;
+        position_type m_positionType { position_type::none };
 };
 
 
