@@ -14,8 +14,9 @@ project(pnl_calculator
 
 include_directories(include)
 
+file(GLOB_RECURSE SRC_FILES "src/*.cpp")
 add_executable(
     pnl_calculator
-    src/main.cpp
-    src/pnl_calculator.cpp
+    ${SRC_FILES}
 )
+
