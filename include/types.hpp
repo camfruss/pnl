@@ -1,18 +1,18 @@
 #pragma once
 
 
-enum class order_type {
+enum class OrderType {
     buy,
     sell
 };
 
-enum class position_type {
+enum class PositionType {
     none,
     short_position,
     long_position
 };
 
-enum class accounting_method {
+enum class AccountingType {
     fifo,  // first-in, first-out
     lifo,  // last-in, first-out 
     hifo,  // highest-in, first-out 
